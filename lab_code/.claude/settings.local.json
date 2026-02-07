@@ -1,8 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "Bash(brew --prefix:*)",
-      "Bash(/opt/homebrew/opt/binutils/bin/objdump:*)"
-    ]
-  }
-}

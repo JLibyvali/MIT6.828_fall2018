@@ -6,11 +6,7 @@
     path = xv6_src/xv6-riscv
     url = https://github.com/mit-pdos/xv6-riscv
 
-#[submodule "jos"]
+
+#[submodule "lab_code"]
 #    path = lab_code
-#    url  = https://pdos.csail.mit.edu/6.828/2018/jos.git
-
-
-[submodule "lab_code"]
-	path = lab_code
-	url = https://pdos.csail.mit.edu/6.828/2018/jos.git
+#    url = https://pdos.csail.mit.edu/6.828/2018/jos.git

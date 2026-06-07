@@ -21,11 +21,11 @@
       "-gstabs",
       "-c",
       "-o",
-      "obj/kern/monitor.o",
-      "kern/monitor.c"
+      "obj/kern/pmap.o",
+      "kern/pmap.c"
     ],
     "directory": "/home/libyvali/Develop/MIT6.828_fall2018/lab_code",
-    "file": "/home/libyvali/Develop/MIT6.828_fall2018/lab_code/kern/monitor.c",
-    "output": "/home/libyvali/Develop/MIT6.828_fall2018/lab_code/obj/kern/monitor.o"
+    "file": "/home/libyvali/Develop/MIT6.828_fall2018/lab_code/kern/pmap.c",
+    "output": "/home/libyvali/Develop/MIT6.828_fall2018/lab_code/obj/kern/pmap.o"
   }
 ]

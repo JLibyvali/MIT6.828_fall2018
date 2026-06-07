@@ -1,6 +1,7 @@
 // Simple command-line kernel monitor useful for
 // controlling the kernel and exploring the system interactively.
 
+#include "inc/types.h"
 #include <inc/stdio.h>
 #include <inc/string.h>
 #include <inc/memlayout.h>
@@ -63,7 +64,7 @@ mon_backtrace(int argc, char **argv, struct Trapframe *tf)
 
 	uint32_t* esp = (uint32_t *)read_esp();
 	uint32_t* ebp = (uint32_t *)read_ebp();
-	cprintf("Stack backtrace\n");	// The `mon_backtrace()` itself, and we need print all outstanding stack frames.
+	cprintf(ANSI_BLUE"Stack backtrace"ANSI_NONE);	// The `mon_backtrace()` itself, and we need print all outstanding stack frames.
 	
 	/* When call functions, the `call` instruction will push function return address to stack.
 		So at the function entry just after the `call`. *%esp points to the return address
@@ -80,12 +81,18 @@ mon_backtrace(int argc, char **argv, struct Trapframe *tf)
 	while ((uint32_t)ebp != 0) {
 		memset(args, 0, 5);
 		uint32_t callerEbp =  *ebp;
-		uint32_t retAddr = *(ebp+1);
-	
+		uint32_t ret = *(ebp+1);
+
 		for(int i=0; i<5; i++) {
 			args[i] = *(ebp +2+ i);	// Skip caller's $ebp and return address.
 		}
-		cprintf("ebp %08x eip %08x args %08x %08x %08x %08x %08x\n",(uint32_t)ebp, retAddr, args[0],args[1],args[2],args[3],args[4]);
+
+		struct Eipdebuginfo info;
+		memset(&info, 0, sizeof(struct Eipdebuginfo));
+		if(debuginfo_eip(ret, &info) == 0) {
+			cprintf("ebp %08x eip %08x args %08x %08x %08x %08x %08x\n",(uint32_t)ebp, ret, args[0],args[1],args[2],args[3],args[4]);
+			cprintf("%s:%d: %.*s+%d\n", info.eip_file, info.eip_line, info.eip_fn_namelen, info.eip_fn_name, (ret - info.eip_fn_addr));
+		}
 		ebp = (uint32_t*) callerEbp;
 	}
 

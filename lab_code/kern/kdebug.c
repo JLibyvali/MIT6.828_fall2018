@@ -48,8 +48,7 @@ extern const char __STABSTR_END__[];		// End of string table
 //	will exit setting left = 118, right = 554.
 //
 static void
-stab_binsearch(const struct Stab *stabs, int *region_left, int *region_right,
-	       int type, uintptr_t addr)
+stab_binsearch(const struct Stab *stabs, int *region_left, int *region_right, int type, uintptr_t addr)
 {
 	int l = *region_left, r = *region_right, any_matches = 0;
 
@@ -59,7 +58,8 @@ stab_binsearch(const struct Stab *stabs, int *region_left, int *region_right,
 		// search for earliest stab with right type
 		while (m >= l && stabs[m].n_type != type)
 			m--;
-		if (m < l) {	// no match in [l, m]
+
+		if (m < l) {	// no matched stab type in [l, m]
 			l = true_m + 1;
 			continue;
 		}
@@ -73,8 +73,7 @@ stab_binsearch(const struct Stab *stabs, int *region_left, int *region_right,
 			*region_right = m - 1;
 			r = m - 1;
 		} else {
-			// exact match for 'addr', but continue loop to find
-			// *region_right
+			// exact match for 'addr', but continue loop to find *region_right
 			*region_left = m;
 			l = m;
 			addr++;
@@ -85,10 +84,9 @@ stab_binsearch(const struct Stab *stabs, int *region_left, int *region_right,
 		*region_right = *region_left - 1;
 	else {
 		// find rightmost region containing 'addr'
-		for (l = *region_right;
-		     l > *region_left && stabs[l].n_type != type;
-		     l--)
+		for (l = *region_right;l > *region_left && stabs[l].n_type != type;l--)
 			/* do nothing */;
+
 		*region_left = l;
 	}
 }
@@ -154,6 +152,7 @@ debuginfo_eip(uintptr_t addr, struct Eipdebuginfo *info)
 		// in the string table, but check bounds just in case.
 		if (stabs[lfun].n_strx < stabstr_end - stabstr)
 			info->eip_fn_name = stabstr + stabs[lfun].n_strx;
+
 		info->eip_fn_addr = stabs[lfun].n_value;
 		addr -= info->eip_fn_addr;
 		// Search within the function definition for the line number.
@@ -169,7 +168,6 @@ debuginfo_eip(uintptr_t addr, struct Eipdebuginfo *info)
 	// Ignore stuff after the colon.
 	info->eip_fn_namelen = strfind(info->eip_fn_name, ':') - info->eip_fn_name;
 
-
 	// Search within [lline, rline] for the line number stab.
 	// If found, set info->eip_line to the right line number.
 	// If not found, return -1.
@@ -179,7 +177,13 @@ debuginfo_eip(uintptr_t addr, struct Eipdebuginfo *info)
 	//	Look at the STABS documentation and <inc/stab.h> to find
 	//	which one.
 	// Your code here.
-
+	stab_binsearch(stabs, &lline, &rline, N_SLINE, addr);
+	if(lline <= rline) {
+		info->eip_line = stabs[lline].n_desc;
+	} else {
+		// Not found
+		return -1;
+	}
 
 	// Search backwards from the line number for the relevant filename
 	// stab.

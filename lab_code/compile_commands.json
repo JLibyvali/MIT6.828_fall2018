@@ -1,7 +1,7 @@
 [
   {
     "arguments": [
-      "/usr/bin/gcc",
+      "/usr/local/i386-jos-elf/bin/i386-jos-elf-gcc",
       "-pipe",
       "-nostdinc",
       "-O1",

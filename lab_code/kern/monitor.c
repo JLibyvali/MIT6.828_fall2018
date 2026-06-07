@@ -1,6 +1,7 @@
 // Simple command-line kernel monitor useful for
 // controlling the kernel and exploring the system interactively.
 
+#include "inc/types.h"
 #include <inc/stdio.h>
 #include <inc/string.h>
 #include <inc/memlayout.h>
@@ -58,9 +59,45 @@ int
 mon_backtrace(int argc, char **argv, struct Trapframe *tf)
 {
 	// Your code here.
+	// And because GCC optimization, `read_ebp` such inline functions may get calls before `mon_backtrace` function prologue,
+	// So we need assembly code re-check.
+
+	uint32_t* esp = (uint32_t *)read_esp();
+	uint32_t* ebp = (uint32_t *)read_ebp();
+	cprintf(ANSI_BLUE"Stack backtrace"ANSI_NONE);	// The `mon_backtrace()` itself, and we need print all outstanding stack frames.
+	
+	/* When call functions, the `call` instruction will push function return address to stack.
+		So at the function entry just after the `call`. *%esp points to the return address
+		And *(%esp + 4) points to first argument pushed by caller.
+	*/
+	/*
+		And then function prologue will:
+			1. Push save caller's stack frame base pointer to stack.
+			2. Save this function current stack frame base pointer to $ebp register.
+		And with function execution order, $esp will keep substraction moving.
+		But $ebp always remember this stack frame entry beginning.
+	*/
+	int args[5];	// Here we need print first 5 arguments.
+	while ((uint32_t)ebp != 0) {
+		memset(args, 0, 5);
+		uint32_t callerEbp =  *ebp;
+		uint32_t ret = *(ebp+1);
+
+		for(int i=0; i<5; i++) {
+			args[i] = *(ebp +2+ i);	// Skip caller's $ebp and return address.
+		}
+
+		struct Eipdebuginfo info;
+		memset(&info, 0, sizeof(struct Eipdebuginfo));
+		if(debuginfo_eip(ret, &info) == 0) {
+			cprintf("ebp %08x eip %08x args %08x %08x %08x %08x %08x\n",(uint32_t)ebp, ret, args[0],args[1],args[2],args[3],args[4]);
+			cprintf("%s:%d: %.*s+%d\n", info.eip_file, info.eip_line, info.eip_fn_namelen, info.eip_fn_name, (ret - info.eip_fn_addr));
+		}
+		ebp = (uint32_t*) callerEbp;
+	}
+
 	return 0;
 }
-
 
 
 /***** Kernel monitor command interpreter *****/
@@ -112,9 +149,8 @@ monitor(struct Trapframe *tf)
 {
 	char *buf;
 
-	cprintf("Welcome to the JOS kernel monitor!\n");
+	cprintf(ANSI_GREEN"Welcome to the JOS kernel monitor!"ANSI_NONE);
 	cprintf("Type 'help' for a list of commands.\n");
-
 
 	while (1) {
 		buf = readline("K> ");

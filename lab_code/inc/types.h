@@ -72,4 +72,9 @@ typedef int32_t off_t;
 // Return the offset of 'member' relative to the beginning of a struct type
 #define offsetof(type, member)  ((size_t) (&((type*)0)->member))
 
+#define ANSI_NONE "\033[0m\n"
+#define ANSI_RED "\033[31m"
+#define ANSI_GREEN "\033[32m"
+#define ANSI_BLUE "\033[34m"
+
 #endif /* !JOS_INC_TYPES_H */

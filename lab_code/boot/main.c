@@ -32,8 +32,8 @@
 #define SECTSIZE	512
 #define ELFHDR		((struct Elf *) 0x10000) // scratch space
 
-void readsect(void* destAddress, uint32_t offset);
-void readseg(uint32_t physicalAddress, uint32_t count, uint32_t offset);
+void readsect(void*, uint32_t);
+void readseg(uint32_t, uint32_t, uint32_t);
 
 void
 bootmain(void)
@@ -55,7 +55,7 @@ bootmain(void)
 		// as the physical address)
 		readseg(ph->p_pa, ph->p_memsz, ph->p_offset);
 
-	// call the entry point from the ELF header, also the `kernel` image entry point.
+	// call the entry point from the ELF header
 	// note: does not return!
 	((void (*)(void)) (ELFHDR->e_entry))();
 

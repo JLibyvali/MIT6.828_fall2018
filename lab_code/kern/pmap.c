@@ -24,7 +24,6 @@ static struct PageInfo *page_free_list;  // Free list of physical pages
 // --------------------------------------------------------------
 // Detect machine's physical memory setup.
 // --------------------------------------------------------------
-
 static int              nvram_read(int r) { return mc146818_read(r) | (mc146818_read(r + 1) << 8); }
 
 static void             i386_detect_memory(void)
@@ -46,13 +45,13 @@ static void             i386_detect_memory(void)
     else
         totalmem = basemem;
 
-    npages         = totalmem / (PGSIZE / 1024);
-    npages_basemem = basemem / (PGSIZE / 1024);
+    npages         = totalmem >> (PGSIZE >> 10);
+    npages_basemem = basemem >> (PGSIZE >> 10);
 
     cprintf("\n");
     cprintf(
-        ANSI_RED "Physical memory: %uK available, base = %uK, extended = %uK" ANSI_NONE, totalmem, basemem,
-        totalmem - basemem
+        ANSI_RED "Physical memory: %uK=%uM available, base-memory = %uK, extended-memory = %uK. 4K pages num: %u" ANSI_NONE,
+        totalmem, totalmem>>10, basemem, totalmem - basemem, npages
     );
     cprintf("\n");
 }
@@ -60,7 +59,6 @@ static void             i386_detect_memory(void)
 // --------------------------------------------------------------
 // Set up memory mappings above UTOP.
 // --------------------------------------------------------------
-
 static void       boot_map_region(pde_t *pgdir, uintptr_t va, size_t size, physaddr_t pa, int perm);
 static void       check_page_free_list(bool only_low_memory);
 static void       check_page_alloc(void);
@@ -191,7 +189,6 @@ void mem_init(void)
 
     //////////////////////////////////////////////////////////////////////
     // Now we set up virtual memory
-    panic(ANSI_GREEN"----------Finish page functions ------------"ANSI_NONE);
 
     //////////////////////////////////////////////////////////////////////
     // Map 'pages' read-only by the user at linear address UPAGES
@@ -200,6 +197,7 @@ void mem_init(void)
     //      (ie. perm = PTE_U | PTE_P)
     //    - pages itself -- kernel RW, user NONE
     // Your code goes here:
+    boot_map_region(kern_pgdir, UPAGES, npages * sizeof(struct PageInfo), PADDR(pages), PTE_U);
 
     //////////////////////////////////////////////////////////////////////
     // Use the physical memory that 'bootstack' refers to as the kernel
@@ -212,6 +210,7 @@ void mem_init(void)
     //       overwrite memory.  Known as a "guard page".
     //     Permissions: kernel RW, user NONE
     // Your code goes here:
+    boot_map_region(kern_pgdir, (KSTACKTOP - KSTKSIZE), KSTKSIZE, PADDR(bootstack), PTE_W);
 
     //////////////////////////////////////////////////////////////////////
     // Map all of physical memory at KERNBASE.
@@ -221,6 +220,7 @@ void mem_init(void)
     // we just set up the mapping anyway.
     // Permissions: kernel RW, user NONE
     // Your code goes here:
+    boot_map_region(kern_pgdir, KERNBASE, npages * sizeof(struct PageInfo), 0, PTE_W);
 
     // Check that the initial page directory has been set up correctly.
     check_kern_pgdir();
@@ -437,7 +437,7 @@ static void boot_map_region(pde_t *pgdir, uintptr_t va, size_t size, physaddr_t 
             panic(ANSI_RED "Allocate page from page table use `pgdir_walk()` failed." ANSI_NONE);
 
         // Map to physical page
-        pa              += i * PGSIZE;
+        pa      += i * PGSIZE;
         *newpte  = pa | perm | PTE_P;
     }
 }
@@ -484,15 +484,15 @@ int page_insert(pde_t *pgdir, struct PageInfo *pp, void *va, int perm)
     pp->pp_ref++;
 
     /*
-        If already have page mapped at `va`, we should delete it, and the `page_remove()` will handle the `tlb invalidate`.
-        Because we increment pp_ref of `pp` above, now if original allocated page is same as `pp`, the pp will not be free.
-        If it's another pages, `page_remove()` will decrement reference count and free it.
+        If already have page mapped at `va`, we should delete it, and the `page_remove()` will handle the `tlb
+       invalidate`. Because we increment pp_ref of `pp` above, now if original allocated page is same as `pp`, the pp
+       will not be free. If it's another pages, `page_remove()` will decrement reference count and free it.
     */
     if (*new_pte & PTE_P)
         page_remove(pgdir, va);
 
-    // After above `page_remove()`, now `va` PTE is 0 (removed already allocated different page) or just to `pp` page frame
-    // Now update permissions.
+    // After above `page_remove()`, now `va` PTE is 0 (removed already allocated different page) or just to `pp` page
+    // frame Now update permissions.
     *new_pte = page2pa(pp) | perm | PTE_P;
     return 0;
 }

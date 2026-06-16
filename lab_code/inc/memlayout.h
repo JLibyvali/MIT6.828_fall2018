@@ -45,7 +45,7 @@
  *                     :              .               :                   |
  *    MMIOLIM ------>  +------------------------------+ 0xefc00000      --+
  *                     |       Memory-mapped I/O      | RW/--  PTSIZE
- * ULIM, MMIOBASE -->  +------------------------------+ 0xef800000
+ * ULIM, MMIOBASE -->  +------------------------------+ 0xef800000	// Above part reserved approximate 256MB of virtual-address space for kernel.
  *                     |  Cur. Page Table (User R-)   | R-/R-  PTSIZE
  *    UVPT      ---->  +------------------------------+ 0xef400000
  *                     |          RO PAGES            | R-/R-  PTSIZE

@@ -197,7 +197,7 @@ void mem_init(void)
     //      (ie. perm = PTE_U | PTE_P)
     //    - pages itself -- kernel RW, user NONE
     // Your code goes here:
-    boot_map_region(kern_pgdir, UPAGES, npages * sizeof(struct PageInfo), PADDR(pages), PTE_U);
+    boot_map_region(kern_pgdir, UPAGES, ROUNDUP(npages * sizeof(struct PageInfo), PGSIZE), PADDR(pages), PTE_U);
 
     //////////////////////////////////////////////////////////////////////
     // Use the physical memory that 'bootstack' refers to as the kernel
@@ -211,6 +211,7 @@ void mem_init(void)
     //     Permissions: kernel RW, user NONE
     // Your code goes here:
     boot_map_region(kern_pgdir, (KSTACKTOP - KSTKSIZE), KSTKSIZE, PADDR(bootstack), PTE_W);
+    // Memory address below `KSTACKTOP-KSTKSIZE` not backed by physical memory.
 
     //////////////////////////////////////////////////////////////////////
     // Map all of physical memory at KERNBASE.
@@ -220,7 +221,7 @@ void mem_init(void)
     // we just set up the mapping anyway.
     // Permissions: kernel RW, user NONE
     // Your code goes here:
-    boot_map_region(kern_pgdir, KERNBASE, npages * sizeof(struct PageInfo), 0, PTE_W);
+    boot_map_region(kern_pgdir, KERNBASE, ROUNDUP((0xFFFFFFFF - KERNBASE), PGSIZE), 0, PTE_W);
 
     // Check that the initial page directory has been set up correctly.
     check_kern_pgdir();
@@ -430,6 +431,9 @@ pte_t *pgdir_walk(pde_t *pgdir, const void *va, int create)
 static void boot_map_region(pde_t *pgdir, uintptr_t va, size_t size, physaddr_t pa, int perm)
 {
     size_t pgNums = size / PGSIZE;
+    if(size % PGSIZE != 0)
+        pgNums++;
+
     for (int i = 0; i < pgNums; i++)
     {
         pte_t *newpte = pgdir_walk(pgdir, (void *)(va + i * PGSIZE), 1);
@@ -437,8 +441,8 @@ static void boot_map_region(pde_t *pgdir, uintptr_t va, size_t size, physaddr_t 
             panic(ANSI_RED "Allocate page from page table use `pgdir_walk()` failed." ANSI_NONE);
 
         // Map to physical page
-        pa      += i * PGSIZE;
-        *newpte  = pa | perm | PTE_P;
+        physaddr_t curpa = pa + (i * PGSIZE);
+        *newpte  = curpa | perm | PTE_P;
     }
 }
 
@@ -725,7 +729,9 @@ static void check_kern_pgdir(void)
     // check pages array
     n     = ROUNDUP(npages * sizeof(struct PageInfo), PGSIZE);
     for (i = 0; i < n; i += PGSIZE)
+    {
         assert(check_va2pa(pgdir, UPAGES + i) == PADDR(pages) + i);
+    }
 
     // check phys mem
     for (i = 0; i < npages * PGSIZE; i += PGSIZE)

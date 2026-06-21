@@ -550,7 +550,11 @@ void page_remove(pde_t *pgdir, void *va)
         // Decrement page reference count and try free
         page_decref(pageAtVa);
 
-        *store = 0;  // Also reset PTE_P flag to 0.
+        /*
+        Dereference the `pte_t` pointer to get actual PTE entry(contains physical memory page address combines several permission bits.)
+        Then we clear the whole PTE entry.
+        */
+        *store = 0;
 
         tlb_invalidate(pgdir, va);
     }
